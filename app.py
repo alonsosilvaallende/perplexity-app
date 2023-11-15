@@ -70,5 +70,5 @@ def Page():
             solara_df = solara.DataFrame(df, items_per_page=11)
             with solara.Tooltip(solara_df, color="white"):
               solara.Style(css)
-              solara.Text(f"{tokens_with_pad.decode(tokens[0][i+1])}|", classes=[f"{color}"])
+              solara.Text(f"{tokenizer.decode(tokens_with_pad[0][i+1])}|", classes=[f"{color}"])
 Page()
