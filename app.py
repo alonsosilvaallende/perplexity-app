@@ -44,15 +44,15 @@ def Page():
       with solara.VBox():
         with solara.HBox(align_items="stretch"):
           tokens = tokenizer.encode(text1.value, return_tensors="pt")
-          tokens = torch.cat((torch.tensor([tokenizer.eos_token_id]), tokens[0])).reshape(1,-1)
-          for i in np.arange(0,len(tokens[0])-1):
-            outputs = model.generate(tokens[0][:i+1].reshape(1,-1), max_new_tokens=1, output_scores=True, return_dict_in_generate=True, pad_token_id=tokenizer.eos_token_id)
+          tokens_with_pad = torch.cat((torch.tensor([tokenizer.eos_token_id]), tokens[0])).reshape(1,-1)
+          for i in np.arange(0,len(tokens_with_pad[0])-1):
+            outputs = model.generate(tokens_with_pad[0][:i+1].reshape(1,-1), max_new_tokens=1, output_scores=True, return_dict_in_generate=True, pad_token_id=tokenizer.eos_token_id)
             scores = F.softmax(outputs.scores[0], dim=-1)
             top_10 = torch.topk(scores, 10)
             df = pd.DataFrame()
-            a = scores[0][tokens[0][i+1]]
-            b = top_10.values
-            df["probs"] = list(np.concatenate([a.reshape(-1,1).numpy()[0], b[0].numpy()]))
+            next_token_prob = scores[0][tokens_with_pad[0][i+1]]
+            top_10_probs = top_10.values
+            df["probs"] = list(np.concatenate([next_token_prob.reshape(-1,1).numpy()[0], top_10_probs[0].numpy()]))
             diff = 100*(df["probs"].iloc[0]-df["probs"].iloc[1])
             if np.abs(diff)<1:
               color = "mystronggreen"
@@ -64,11 +64,11 @@ def Page():
               color = "myyellow"
             else:
               color = "myred"
-            df["probs"] = [f"{value:.2%}" for value in df["probs"].values]
-            aux = [tokenizer.decode(tokens[0][i+1])] + [tokenizer.decode(top_10.indices[0][i]) for i in range(10)]
+            df["probs"] = df["probs"].apply(lambda prob: f"{prob:.2%}")
+            aux = [tokenizer.decode(tokens_with_pad[0][i+1])] + [tokenizer.decode(top_10.indices[0][i]) for i in range(10)]
             df["predicted next token"] = aux
             solara_df = solara.DataFrame(df, items_per_page=11)
             with solara.Tooltip(solara_df, color="white"):
               solara.Style(css)
-              solara.Text(f"{tokenizer.decode(tokens[0][i+1])}|", classes=[f"{color}"])
+              solara.Text(f"{tokenizer.decode(tokens_with_pad[0][i+1])}|", classes=[f"{color}"])
 Page()
